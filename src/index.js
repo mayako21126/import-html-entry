@@ -252,8 +252,43 @@ export default function importHTML(url, opts = {}) {
 		.then(response => readResAsString(response, autoDecodeResponse))
 		.then(html => {
 
-			const assetPublicPath = getPublicPath(url);
+      const assetPublicPath = getPublicPath(url);
+      let doc = document.createRange().createContextualFragment(html);
+      let metas = doc.querySelector('meta[name="autoModules"]')
+      let modules  = null
+      if(metas){
+        modules = metas.getAttribute('content')
+      }
+			// let modules = html.match(/\<meta name="autoModules" content=\'(\S*)?\'\>/);
+			let m = JSON.parse(modules ? modules : '[]')
+			if (m.length >= 1) {
+				let scriptsString = ''
+				m[1].forEach((item) => {
+					scriptsString += '<script src="' + item + '"></script>'
+				})
+				html = html.replace(/<\/body>/, scriptsString + '</body>')
+			}
 			const { template, scripts, entry, styles } = processTpl(getTemplate(html), assetPublicPath);
+      if (m.length >= 1) {
+				let SystemJS = window.SystemJS
+        let p = []
+				if (m.length !== 0) {
+					m[0].forEach((item,i) => {
+            if(!window[m[0][i]]){
+              const pi = SystemJS.import(item)
+              p.push(pi)
+            }
+					})
+					await Promise.all(p).then((list) => {
+						list.forEach((item, i) => {
+							window[m[0][i]] = item
+						})
+						console.log('import finish')
+					})
+				}
+			}
+			// const assetPublicPath = getPublicPath(url);
+			// const { template, scripts, entry, styles } = processTpl(getTemplate(html), assetPublicPath);
 
 			return getEmbedHTML(template, styles, { fetch }).then(embedHTML => ({
 				template: embedHTML,
