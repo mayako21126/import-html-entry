@@ -250,7 +250,7 @@ export default function importHTML(url, opts = {}) {
 
 	return embedHTMLCache[url] || (embedHTMLCache[url] = fetch(url)
 		.then(response => readResAsString(response, autoDecodeResponse))
-		.then(html => {
+		.then(async html => {
 
       const assetPublicPath = getPublicPath(url);
       let doc = document.createRange().createContextualFragment(html);
